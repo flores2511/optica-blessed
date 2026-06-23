@@ -1,10 +1,12 @@
+import os
 from flask import Flask, render_template, request, jsonify, redirect, session
 from functools import wraps
 from models import db, Paciente
 
+
 # ─── Configuración ────────────────────────────────────────────────────────────
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///optica.db'   # archivo local
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///optica.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 # Clave secreta para firmar las sesiones (cámbiala antes de vender el sistema)
