@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blessed — Gestión de Pacientes</title>
+  
+  <style>
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+       font-family: 'Segoe UI', system-ui, sans-serif;
+        background: #f5f5f0;
+        color: #1a1a1a;
+        min-height: 100vh;
+}
+    
+    /* ── Encabezado ── */
+    header {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e5e0;
+      padding: 1rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo { font-size: 1.2rem; font-weight: 600; }
+    .logo span { color: #2563eb; }
+
+    /* ── Contenedor principal ── */
+    main { max-width: 1100px; margin: 2rem auto; padding: 0 1.5rem; }
+
+    /* ── Tarjetas de estadísticas ── */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      text-align: center;
+    }
+    .stat-card .num  { font-size: 2rem; font-weight: 600; color: #2563eb; }
+    .stat-card .lbl  { font-size: 0.8rem; color: #666; margin-top: 4px; }
+
+    /* ── Barra de herramientas ── */
+    .toolbar {
+      display: flex;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      flex-wrap: wrap;
+    }
+    .toolbar input {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.55rem 0.85rem;
+      border: 1px solid #d1d5db;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      outline: none;
+    }
+    .toolbar input:focus { border-color: #2563eb; box-shadow: 0 0 0 3px #2563eb22; }
+
+    .btn {
+      padding: 0.55rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .btn-primary  { background: #2563eb; color: #fff; }
+    .btn-primary:hover  { background: #1d4ed8; }
+    .btn-secondary { background: #fff; color: #374151; border-color: #d1d5db; }
+    .btn-secondary:hover { background: #f9fafb; }
+    .btn-danger   { background: #fee2e2; color: #b91c1c; border-color: #fca5a5; }
+    .btn-danger:hover   { background: #fecaca; }
+    .btn-sm { padding: 0.3rem 0.7rem; font-size: 0.8rem; border-radius: 6px; }
+    .btn-logout {
+      background: #dc2626;
+      color: #fff;
+      border-color: #dc2626;
+}
+    .btn-logout:hover {
+      background: #b91c1c;
+    }
+
+
+    /* ── Tabla de pacientes ── */
+    .card {
+      background: #fff;
+      border: 1px solid #e5e5e0;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    thead th {
+      background: #f9fafb;
+      text-align: left;
+      padding: 0.75rem 1rem;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #6b7280;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid #e5e5e0;
+    }
+    tbody td { padding: 0.85rem 1rem; border-bottom: 1px solid #f3f4f6; vertical-align: middle; }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: #f9fafb; }
+
+    .nombre { font-weight: 500; }
+    .telefono { font-size: 0.8rem; color: #6b7280; }
+
+    /* Pastillas de tratamiento */
+    .pill {
+      display: inline-block;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    .pill-miopia       { background: #dbeafe; color: #1e40af; }
+    .pill-astigmatismo { background: #dcfce7; color: #166534; }
+    .pill-hipermetropia{ background: #fef9c3; color: #854d0e; }
+    .pill-presbicia    { background: #fce7f3; color: #9d174d; }
+    .pill-bifocal      { background: #ede9fe; color: #5b21b6; }
+    .pill-progresivo   { background: #ffedd5; color: #9a3412; }
+
+    .grad-text { font-size: 0.8rem; color: #374151; }
+    .cil-text  { font-size: 0.75rem; color: #9ca3af; }
+
+    .acciones { display: flex; gap: 0.5rem; }
+
+    .empty {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: #9ca3af;
+      font-size: 0.9rem;
+    }
+
+    /* ── Modal ── */
+    .overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    .overlay.open { display: flex; }
+    .modal {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%;
+      max-width: 540px;
+      margin: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 1.25rem; }
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    .form-group.full { grid-column: 1 / -1; }
+    label { font-size: 0.78rem; font-weight: 500; color: #374151; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 0.5rem 0.75rem;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 0.88rem;
+      font-family: inherit;
+      outline: none;
+      transition: border 0.15s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px #2563eb22;
+    }
+    .form-group textarea { resize: vertical; min-height: 60px; }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.6rem;
+      margin-top: 1.25rem;
+    }
+
+    /* ── Notificación toast ── */
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      background: #1a1a1a;
+      color: #fff;
+      padding: 0.7rem 1.1rem;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      z-index: 200;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.success { background: #16a34a; }
+    .toast.error   { background: #dc2626; }
+
+    @media (max-width: 640px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.full { grid-column: 1; }
+      table { font-size: 0.8rem; }
+      thead th:nth-child(4),
+      tbody td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Óptica <span>Blessed</span></div>
+  <div style="display:flex;align-items:center;gap:1rem;">
+    <div class="subtitle">Lic. Optometría Marco Julio Herrera Vega </div>
+    <span style="font-size:0.82rem;color:#6b7280;">Sistema de gestión de pacientes</span>
+    <button class="btn btn-logout btn-sm" onclick="cerrarSesion()">Cerrar sesión</button>
+  </div>
+</header>
+<main>
+<script>  // ── Cerrar sesión ─────────────────────────────────────────────────────────
+  function cerrarSesion() {
+    if (confirm('¿Seguro que quieres cerrar sesión?')) {
+      window.location.href = '/logout';
+    }
+  }
+ </script>
+
+  <!-- Estadísticas -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="num" id="stat-total">0</div>
+      <div class="lbl">Total pacientes</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-miopia">0</div>
+      <div class="lbl">Con miopía</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-astig">0</div>
+      <div class="lbl">Astigmatismo</div>
+    </div>
+    <div class="stat-card">
+      <div class="num" id="stat-otros">0</div>
+      <div class="lbl">Otros tratamientos</div>
+    </div>
+  </div>
+
+  <!-- Barra de búsqueda y botón -->
+  <div class="toolbar">
+    <input type="text" id="busqueda" placeholder="Buscar por nombre o tratamiento..." oninput="buscar()">
+    <button class="btn btn-primary" onclick="abrirModal()">+ Nuevo paciente</button>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Paciente</th>
+          <th>Tratamiento</th>
+          <th>Graduación OD / OI</th>
+          <th>Fecha de registro</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tabla-body"></tbody>
+    </table>
+    <div class="empty" id="empty-msg" style="display:none">No se encontraron pacientes.</div>
+  </div>
+
+</main>
+
+<!-- Modal: agregar / editar paciente -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">Nuevo paciente</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Nombre completo *</label>
+        <input type="text" id="f-nombre" placeholder="Ej. María García López">
+      </div>
+      <div class="form-group">
+        <label>Fecha de nacimiento</label>
+        <input type="date" id="f-fecha">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="text" id="f-telefono" placeholder="55 1234 5678">
+      </div><div class="form-group full">
+  <label>Tratamiento * (puedes seleccionar varios)</label>
+  <div id="f-tratamiento" style="display:flex;flex-wrap:wrap;gap:0.6rem;margin-top:4px;">
+    <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Miopía"> Miopía
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Astigmatismo"> Astigmatismo
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Hipermetropía"> Hipermetropía
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Presbicia"> Presbicia
+    </label>
+    <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Bifocal"> Bifocal
+    </label>
+      <label style="display:flex;align-items:center;gap:5px;font-weight:400;font-size:0.88rem;cursor:pointer;">
+      <input type="checkbox" value="Progresivo"> Progresivo
+    </label>
+  </div>
+</div>
+      <div class="form-group full">
+        <label>RX: OD</label>
+        <input type="text" id="f-graduacion" placeholder="Ej. RX: OD -2.50">
+        </div>
+      <div class="form-group full">
+        <label>RX: OI</label>
+        <input type="text" id="f-cilindro" placeholder="Ej. RX: OI -0.25">
+      </div>
+      
+      <div class="form-group full">
+        <label>Notas clínicas</label>
+        <textarea id="f-notas" placeholder="Observaciones adicionales..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar" onclick="guardarPaciente()">Guardar paciente</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast de notificaciones -->
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Estado global ────────────────────────────────────────────────────────
+  let editandoId = null;
+  let todosPacientes = [];
+
+  // ── Al cargar la página ──────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', cargarPacientes);
+
+  // Cerrar modal al hacer clic fuera de él
+  document.getElementById('overlay').addEventListener('click', function(e) {
+    if (e.target === this) cerrarModal();
+  });
+
+
+  // ── Cargar pacientes desde el servidor ──────────────────────────────────
+  async function cargarPacientes(query = '') {
+    const url = query ? `/api/pacientes?q=${encodeURIComponent(query)}` : '/api/pacientes';
+    try {
+      const resp = await fetch(url);
+      todosPacientes = await resp.json();
+      renderizarTabla(todosPacientes);
+      actualizarEstadisticas(todosPacientes);
+    } catch (err) {
+      mostrarToast('Error al conectar con el servidor', 'error');
+    }
+  }
+
+
+  // ── Buscar (en tiempo real) ──────────────────────────────────────────────
+  let timerBusqueda;
+  function buscar() {
+    clearTimeout(timerBusqueda);
+    timerBusqueda = setTimeout(() => {
+      cargarPacientes(document.getElementById('busqueda').value.trim());
+    }, 300);
+  }
+
+
+  // ── Pintar la tabla ──────────────────────────────────────────────────────
+  function renderizarTabla(lista) {
+    const tbody = document.getElementById('tabla-body');
+    const empty = document.getElementById('empty-msg');
+
+    if (lista.length === 0) {
+      tbody.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    tbody.innerHTML = lista.map(p => {
+      const pillClass = {
+        'Miopía':        'pill-miopia',
+        'Astigmatismo':  'pill-astigmatismo',
+        'Hipermetropía': 'pill-hipermetropia',
+        'Presbicia':     'pill-presbicia',
+        'Bifocal':       'pill-bifocal',
+        'Progresivo':       'pill-progresivo',
+      }[p.tratamiento] || 'pill-progresivo';
+
+const grad = `<div class="grad-text">${p.graduacion || '—'}</div>${p.cilindro ? `<div class="cil-text">Cil: ${p.cilindro}</div>` : ''}`;
+
+return`<tr>
+<td>
+          <div class="nombre">${escapar(p.nombre_completo)}</div>
+          <div class="telefono">${escapar(p.telefono) || '—'}</div>
+        </td>
+        <td><span class="pill ${pillClass}">${escapar(p.tratamiento)}</span></td>
+        <td>${grad}</td>
+        <td style="font-size:0.8rem;color:#6b7280">${p.fecha_registro || '—'}</td>
+        <td>
+          <div class="acciones">
+            <button class="btn btn-secondary btn-sm" onclick="abrirModal(${p.id})">Editar</button>
+            <button class="btn btn-danger btn-sm" onclick="eliminarPaciente(${p.id}, '${escapar(p.nombre_completo)}')">Eliminar</button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+
+  // ── Estadísticas ─────────────────────────────────────────────────────────
+  function actualizarEstadisticas(lista) {
+    document.getElementById('stat-total').textContent  = lista.length;
+    document.getElementById('stat-miopia').textContent = lista.filter(p => p.tratamiento === 'Miopía').length;
+    document.getElementById('stat-astig').textContent  = lista.filter(p => p.tratamiento === 'Astigmatismo').length;
+    document.getElementById('stat-otros').textContent  = lista.filter(p => !['Miopía','Astigmatismo'].includes(p.tratamiento)).length;
+  }
+
+
+  // ── Abrir modal (nuevo o editar) ─────────────────────────────────────────
+  function abrirModal(id = null) {
+    editandoId = id;
+    limpiarFormulario();
+
+    if (id) {
+      const p = todosPacientes.find(x => x.id === id);
+      document.getElementById('modal-titulo').textContent   = 'Editar paciente';
+      document.getElementById('btn-guardar').textContent    = 'Guardar cambios';
+      document.getElementById('f-nombre').value            = p.nombre_completo;
+      document.getElementById('f-fecha').value             = p.fecha_nacimiento;
+      document.getElementById('f-telefono').value          = p.telefono;
+      document.querySelectorAll('#f-tratamiento input[type="checkbox"]').forEach(c => {
+     c.checked = p.tratamiento.split(', ').includes(c.value);
+      });
+      document.getElementById('f-graduacion').value                = p.graduacion;
+      document.getElementById('f-cilindro').value          = p.cilindro;
+      document.getElementById('f-notas').value             = p.notas;
+    } else {
+      document.getElementById('modal-titulo').textContent = 'Nuevo paciente';
+      document.getElementById('btn-guardar').textContent  = 'Guardar paciente';
+    }
+
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('f-nombre').focus();
+  }
+
+  function cerrarModal() {
+    document.getElementById('overlay').classList.remove('open');
+    editandoId = null;
+  }
+
+  function limpiarFormulario() {
+    ['f-nombre','f-fecha','f-telefono','f-graduacion','f-cilindro','f-notas'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.querySelectorAll('#f-tratamiento input[type="checkbox"]').forEach(c => c.checked = false);
+}
+
+
+  // ── Guardar paciente (crear o editar) ────────────────────────────────────
+  async function guardarPaciente() {
+        const nombre     = document.getElementById('f-nombre').value.trim();
+        const checkboxes = document.querySelectorAll('#f-tratamiento input[type="checkbox"]:checked');
+        const tratamiento = Array.from(checkboxes).map(c => c.value).join(', ');
+
+if (!nombre || !tratamiento) {
+      mostrarToast('El nombre y el tratamiento son obligatorios', 'error');
+      return;
+    }
+
+    const datos = {
+      nombre_completo:  nombre,
+      fecha_nacimiento: document.getElementById('f-fecha').value,
+      telefono:         document.getElementById('f-telefono').value.trim(),
+      tratamiento:      tratamiento,
+      graduacion:       document.getElementById('f-graduacion').value.trim(),
+      cilindro:        document.getElementById('f-cilindro').value.trim(),
+      notas:            document.getElementById('f-notas').value.trim(),
+    };
+
+    const url    = editandoId ? `/api/pacientes/${editandoId}` : '/api/pacientes';
+    const method = editandoId ? 'PUT' : 'POST';
+
+    try {
+      const resp = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(datos),
+      });
+
+      if (!resp.ok) {
+        const err = await resp.json();
+        mostrarToast(err.error || 'Error al guardar', 'error');
+        return;
+      }
+
+      cerrarModal();
+      await cargarPacientes(document.getElementById('busqueda').value.trim());
+      mostrarToast(editandoId ? 'Paciente actualizado' : 'Paciente registrado', 'success');
+    } catch {
+      mostrarToast('Error de conexión', 'error');
+    }
+  }
+
+
+  // ── Eliminar paciente ─────────────────────────────────────────────────────
+  async function eliminarPaciente(id, nombre) {
+    if (!confirm(`¿Eliminar a ${nombre}? Esta acción no se puede deshacer.`)) return;
+
+    try {
+      await fetch(`/api/pacientes/${id}`, { method: 'DELETE' });
+      await cargarPacientes(document.getElementById('busqueda').value.trim());
+      mostrarToast('Paciente eliminado', 'success');
+    } catch {
+      mostrarToast('Error al eliminar', 'error');
+    }
+  }
+
+
+  // ── Toast de notificaciones ───────────────────────────────────────────────
+  let toastTimer;
+  function mostrarToast(mensaje, tipo = '') {
+    const t = document.getElementById('toast');
+    t.textContent  = mensaje;
+    t.className    = `toast ${tipo} show`;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+
+  // ── Utilidad: escapar HTML ────────────────────────────────────────────────
+  function escapar(str) {
+    if (!str) return '';
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+
+</body>
+</html>
